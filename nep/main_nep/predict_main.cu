@@ -62,7 +62,12 @@ int main(int argc, char* argv[])
 
   dataset_vec[0].energy.copy_to_host(dataset_vec[0].energy_cpu.data());
   for (int nc = 0; nc < dataset_vec[0].Nc; ++nc) {
-    printf("Energy[%d] = %g\n", nc, dataset_vec[0].energy_cpu[nc]);
+    int offset = dataset_vec[0].Na_sum_cpu[nc];
+    float energy_sum = 0.0f;
+    for (int m = 0; m < dataset_vec[0].Na_cpu[nc]; ++m) {
+      energy_sum += dataset_vec[0].energy_cpu[offset + m];
+    }
+    printf("Energy[%d] = %g\n", nc, energy_sum / dataset_vec[0].Na_cpu[nc]);
   }
 
   return 0;

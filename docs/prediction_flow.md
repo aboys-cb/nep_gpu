@@ -36,4 +36,5 @@ The new `predict_main.cu` follows the same steps but skips the SNES layer. It
 creates a `Parameters` object with `Parameters(true)` so no `nep.in` is read,
 loads a `nep.txt` file using `Parameters::load_from_nep_txt`, reads structures
 from a provided XYZ file, constructs a single `Dataset`, builds the proper
-`Potential`, and directly calls `find_force` to obtain predictions.
+`Potential`, and directly calls `find_force` to obtain predictions.  Energies
+are then averaged over all atoms in each configuration before printing.
