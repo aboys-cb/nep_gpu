@@ -677,3 +677,19 @@ bool read_structures(bool is_train, Parameters& para, std::vector<Structure>& st
 
   return has_test_set;
 }
+
+bool read_structures_from_file(const char* filename, Parameters& para, std::vector<Structure>& structures)
+{
+  std::ifstream input(filename);
+  if (!input.is_open()) {
+    std::cout << "Failed to open " << filename << std::endl;
+    return false;
+  }
+  print_line_1();
+  std::string xyz_filename = filename;
+  std::cout << "Started reading " << xyz_filename << std::endl;
+  print_line_2();
+  read_exyz(para, input, structures, xyz_filename);
+  input.close();
+  return true;
+}

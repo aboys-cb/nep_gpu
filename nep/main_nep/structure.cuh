@@ -50,3 +50,4 @@ struct Structure {
 };
 
 bool read_structures(bool is_train, Parameters& para, std::vector<Structure>& structures);
+bool read_structures_from_file(const char* filename, Parameters& para, std::vector<Structure>& structures);

@@ -157,4 +157,5 @@ private:
   void parse_charge_mode(const char** param, int num_param);
   void parse_fine_tune(const char** param, int num_param);
   void parse_save_potential(const char** param, int num_param);
+  void load_from_nep_txt(const std::string& filename, std::vector<float>& elite);
 };
