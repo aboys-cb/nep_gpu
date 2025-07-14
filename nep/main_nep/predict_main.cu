@@ -1,5 +1,6 @@
 #include "parameters.cuh"
 #include "structure.cuh"
+#include "dataset.cuh"
 #include "nep.cuh"
 #include "nep_charge.cuh"
 #include "tnep.cuh"
