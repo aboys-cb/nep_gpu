@@ -100,6 +100,8 @@ public:
     bool calculate_neighbor,
     int deviceCount);
 
+  const GPU_Vector<float>& get_descriptors(int device_id = 0) const { return nep_data[device_id].descriptors; }
+
 private:
   ParaMB paramb;
   ANN annmb[16];
