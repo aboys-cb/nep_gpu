@@ -22,6 +22,7 @@ class Parameters
 {
 public:
   Parameters();
+  explicit Parameters(bool skip_nep_in);
 
   // parameters to be read in
   int version;            // nep version, can be 3 or 4 or 5

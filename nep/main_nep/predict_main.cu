@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
   const char* nep_file = argv[1];
   const char* xyz_file = argv[2];
 
-  Parameters para;
+  Parameters para(true);
   std::vector<float> elite;
   para.load_from_nep_txt(nep_file, elite);
 

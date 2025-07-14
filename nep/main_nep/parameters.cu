@@ -49,6 +49,29 @@ Parameters::Parameters()
   print_line_2();
 }
 
+Parameters::Parameters(bool skip_nep_in)
+{
+  if (skip_nep_in) {
+    set_default_parameters();
+  } else {
+    print_line_1();
+    printf("Started reading nep.in.\n");
+    print_line_2();
+
+    set_default_parameters();
+    read_nep_in();
+    if (is_zbl_set) {
+      read_zbl_in();
+    }
+    calculate_parameters();
+    report_inputs();
+
+    print_line_1();
+    printf("Finished reading nep.in.\n");
+    print_line_2();
+  }
+}
+
 void Parameters::set_default_parameters()
 {
   is_train_mode_set = false;
