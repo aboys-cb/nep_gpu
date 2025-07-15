@@ -37,4 +37,10 @@ creates a `Parameters` object with `Parameters(true)` so no `nep.in` is read,
 loads a `nep.txt` file using `Parameters::load_from_nep_txt`, reads structures
 from a provided XYZ file, constructs a single `Dataset`, builds the proper
 `Potential`, and directly calls `find_force` to obtain predictions.  Energies
-are then averaged over all atoms in each configuration before printing.
+are averaged over all atoms in each configuration before printing.
+
+When predicting a very large set of structures the program might run out of GPU
+memory. `predict_main.cu` therefore accepts an optional third command line
+argument specifying a batch size.  Only that many configurations are loaded and
+processed at a time.  The default batch size is taken from `para.batch_size`
+stored in `nep.txt` (1000 if not set).

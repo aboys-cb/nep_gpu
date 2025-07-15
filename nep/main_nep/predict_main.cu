@@ -12,7 +12,7 @@
 int main(int argc, char* argv[])
 {
   if (argc < 3) {
-    printf("Usage: %s nep.txt structure.xyz\n", argv[0]);
+    printf("Usage: %s nep.txt structure.xyz [batch_size]\n", argv[0]);
     return 1;
   }
 
@@ -23,51 +23,72 @@ int main(int argc, char* argv[])
   std::vector<float> elite;
   para.load_from_nep_txt(nep_file, elite);
 
+  int batch_size = para.batch_size;
+  if (argc > 3) {
+    batch_size = atoi(argv[3]);
+    if (batch_size < 1) {
+      printf("Invalid batch_size %d.\n", batch_size);
+      return 1;
+    }
+  }
+
   std::vector<Structure> structures;
   if (!read_structures_from_file(xyz_file, para, structures)) {
     return 1;
   }
 
   std::vector<Dataset> dataset_vec(1);
-  dataset_vec[0].construct(para, structures, 0, structures.size(), 0);
+  int total_configs = structures.size();
+  int printed_index = 0;
+  for (int start = 0; start < total_configs; start += batch_size) {
+    int end = start + batch_size;
+    if (end > total_configs) {
+      end = total_configs;
+    }
 
-  std::unique_ptr<Potential> potential;
-  if (para.train_mode == 1 || para.train_mode == 2) {
-    potential.reset(new TNEP(para,
-                             dataset_vec[0].N,
-                             dataset_vec[0].N * dataset_vec[0].max_NN_radial,
-                             dataset_vec[0].N * dataset_vec[0].max_NN_angular,
-                             para.version,
-                             1));
-  } else {
-    if (para.charge_mode) {
-      potential.reset(new NEP_Charge(para,
-                                     dataset_vec[0].N,
-                                     dataset_vec[0].Nc,
-                                     dataset_vec[0].N * dataset_vec[0].max_NN_radial,
-                                     dataset_vec[0].N * dataset_vec[0].max_NN_angular,
-                                     para.version,
-                                     1));
+    dataset_vec[0].construct(para, structures, start, end, 0);
+
+    std::unique_ptr<Potential> potential;
+    if (para.train_mode == 1 || para.train_mode == 2) {
+      potential.reset(new TNEP(para,
+                               dataset_vec[0].N,
+                               dataset_vec[0].N * dataset_vec[0].max_NN_radial,
+                               dataset_vec[0].N * dataset_vec[0].max_NN_angular,
+                               para.version,
+                               1));
     } else {
-      potential.reset(new NEP(para,
-                              dataset_vec[0].N,
-                              dataset_vec[0].N * dataset_vec[0].max_NN_radial,
-                              dataset_vec[0].N * dataset_vec[0].max_NN_angular,
-                              para.version,
-                              1));
+      if (para.charge_mode) {
+        potential.reset(new NEP_Charge(para,
+                                       dataset_vec[0].N,
+                                       dataset_vec[0].Nc,
+                                       dataset_vec[0].N * dataset_vec[0].max_NN_radial,
+                                       dataset_vec[0].N * dataset_vec[0].max_NN_angular,
+                                       para.version,
+                                       1));
+      } else {
+        potential.reset(new NEP(para,
+                                dataset_vec[0].N,
+                                dataset_vec[0].N * dataset_vec[0].max_NN_radial,
+                                dataset_vec[0].N * dataset_vec[0].max_NN_angular,
+                                para.version,
+                                1));
+      }
     }
-  }
 
-  potential->find_force(para, elite.data(), dataset_vec, false, true, 1);
+    potential->find_force(para, elite.data(), dataset_vec, false, true, 1);
 
-  dataset_vec[0].energy.copy_to_host(dataset_vec[0].energy_cpu.data());
-  for (int nc = 0; nc < dataset_vec[0].Nc; ++nc) {
-    int offset = dataset_vec[0].Na_sum_cpu[nc];
-    float energy_sum = 0.0f;
-    for (int m = 0; m < dataset_vec[0].Na_cpu[nc]; ++m) {
-      energy_sum += dataset_vec[0].energy_cpu[offset + m];
+    dataset_vec[0].energy.copy_to_host(dataset_vec[0].energy_cpu.data());
+    for (int nc = 0; nc < dataset_vec[0].Nc; ++nc) {
+      int offset = dataset_vec[0].Na_sum_cpu[nc];
+      float energy_sum = 0.0f;
+      for (int m = 0; m < dataset_vec[0].Na_cpu[nc]; ++m) {
+        energy_sum += dataset_vec[0].energy_cpu[offset + m];
+      }
+      printf("Energy[%d] = %g\n", printed_index + nc,
+             energy_sum / dataset_vec[0].Na_cpu[nc]);
     }
-    printf("Energy[%d] = %g\n", nc, energy_sum / dataset_vec[0].Na_cpu[nc]);
+
+    printed_index += dataset_vec[0].Nc;
   }
 
   return 0;
