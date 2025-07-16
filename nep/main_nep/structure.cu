@@ -212,7 +212,8 @@ static void read_one_structure(
     }
   }
   if (para.train_mode == 0 && !has_energy_in_exyz) {
-    PRINT_INPUT_ERROR("'energy' is missing in the second line of a frame.");
+    structure.energy=0.0f;
+    //PRINT_INPUT_ERROR("'energy' is missing in the second line of a frame.");
   }
 
   // get total charge (optional; default is 0)
@@ -450,7 +451,7 @@ static void read_one_structure(
         PRINT_INPUT_ERROR("'pos' is missing in properties.");
       }
       if (force_position < 0 && para.train_mode == 0) {
-        PRINT_INPUT_ERROR("'force' or 'forces' is missing in properties.");
+        //PRINT_INPUT_ERROR("'force' or 'forces' is missing in properties.");
       }
       if (avirial_position < 0 && para.train_mode == 1 && para.atomic_v == 1) {
         PRINT_INPUT_ERROR("'adipole' or 'atomic_dipole' is missing in properties.");

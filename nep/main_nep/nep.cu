@@ -824,6 +824,7 @@ void NEP::find_force(
     GPU_CHECK_KERNEL
 
     if (para.prediction == 1 && para.output_descriptor >= 1) {
+
       FILE* fid_descriptor = my_fopen("descriptor.out", "a");
       std::vector<float> descriptor_cpu(nep_data[device_id].descriptors.size());
       nep_data[device_id].descriptors.copy_to_host(descriptor_cpu.data());

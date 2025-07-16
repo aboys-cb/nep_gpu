@@ -23,6 +23,7 @@
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
+#include <chrono>
 
 void Dataset::copy_structures(std::vector<Structure>& structures_input, int n1, int n2)
 {
@@ -138,11 +139,11 @@ void Dataset::find_Na(Parameters& para)
     Na_sum_cpu[nc] = Na_sum_cpu[nc - 1] + Na_cpu[nc - 1];
   }
 
-  printf("Total number of atoms = %d.\n", N);
-  printf("Number of atoms in the largest configuration = %d.\n", max_Na);
-  if (para.train_mode == 0 || para.train_mode == 3) {
-    printf("Number of configurations having virial = %d.\n", num_virial_configurations);
-  }
+//   printf("Total number of atoms = %d.\n", N);
+//   printf("Number of atoms in the largest configuration = %d.\n", max_Na);
+//   if (para.train_mode == 0 || para.train_mode == 3) {
+//     printf("Number of configurations having virial = %d.\n", num_virial_configurations);
+//   }
 
   Na.resize(Nc);
   Na_sum.resize(Nc);
@@ -381,18 +382,20 @@ void Dataset::find_neighbor(Parameters& para)
     }
   }
 
-  printf("Radial descriptor with a cutoff of %g A:\n", para.rc_radial);
-  printf("    Minimum number of neighbors for one atom = %d.\n", min_NN_radial);
-  printf("    Maximum number of neighbors for one atom = %d.\n", max_NN_radial);
-  printf("Angular descriptor with a cutoff of %g A:\n", para.rc_angular);
-  printf("    Minimum number of neighbors for one atom = %d.\n", min_NN_angular);
-  printf("    Maximum number of neighbors for one atom = %d.\n", max_NN_angular);
+//   printf("Radial descriptor with a cutoff of %g A:\n", para.rc_radial);
+//   printf("    Minimum number of neighbors for one atom = %d.\n", min_NN_radial);
+//   printf("    Maximum number of neighbors for one atom = %d.\n", max_NN_radial);
+//   printf("Angular descriptor with a cutoff of %g A:\n", para.rc_angular);
+//   printf("    Minimum number of neighbors for one atom = %d.\n", min_NN_angular);
+//   printf("    Maximum number of neighbors for one atom = %d.\n", max_NN_angular);
 }
 
 void Dataset::construct(
   Parameters& para, std::vector<Structure>& structures_input, int n1, int n2, int device_id)
 {
   CHECK(gpuSetDevice(device_id));
+  const auto time_begin2 = std::chrono::high_resolution_clock::now();
+
   copy_structures(structures_input, n1, n2);
   find_has_type(para);
   error_cpu.resize(Nc);
@@ -401,6 +404,12 @@ void Dataset::construct(
   find_Na(para);
   initialize_gpu_data(para);
   find_neighbor(para);
+     const auto time_finish2 = std::chrono::high_resolution_clock::now();
+
+  const std::chrono::duration<double> time_used2 = time_finish2 - time_begin2;
+
+    printf("construct find = %f s.\n", time_used2.count());
+
 }
 
 static __global__ void gpu_sum_force_error(

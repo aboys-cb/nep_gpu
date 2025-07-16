@@ -7,7 +7,76 @@
 #include "utilities/error.cuh"
 #include <memory>
 #include <vector>
+#include <sstream>
 #include <cstdio>
+#include <chrono>
+#include <stdio.h>
+void  output(
+  bool is_stress,
+  int num_components,
+  FILE* fid,
+  float* prediction,
+  float* reference,
+  Dataset& dataset)
+{
+  for (int nc = 0; nc < dataset.Nc; ++nc) {
+    for (int n = 0; n < num_components; ++n) {
+      int offset = n * dataset.N + dataset.Na_sum_cpu[nc];
+      float data_nc = 0.0f;
+      for (int m = 0; m < dataset.Na_cpu[nc]; ++m) {
+        data_nc += prediction[offset + m];
+      }
+      if (!is_stress) {
+        fprintf(fid, "%g ", data_nc / dataset.Na_cpu[nc]);
+      } else {
+        fprintf(fid, "%g ", data_nc / dataset.structures[nc].volume * PRESSURE_UNIT_CONVERSION);
+      }
+    }
+    for (int n = 0; n < num_components; ++n) {
+      float ref_value = reference[n * dataset.Nc + nc];
+      if (is_stress) {
+        ref_value *= dataset.Na_cpu[nc] / dataset.structures[nc].volume * PRESSURE_UNIT_CONVERSION;
+      }
+      if (n == num_components - 1) {
+        fprintf(fid, "%g\n", ref_value);
+      } else {
+        fprintf(fid, "%g ", ref_value);
+      }
+    }
+  }
+}
+
+void  update_energy_force_virial(
+  FILE* fid_energy, FILE* fid_force, FILE* fid_virial, FILE* fid_stress, Dataset& dataset)
+{
+  dataset.energy.copy_to_host(dataset.energy_cpu.data());
+  dataset.virial.copy_to_host(dataset.virial_cpu.data());
+  dataset.force.copy_to_host(dataset.force_cpu.data());
+
+  for (int nc = 0; nc < dataset.Nc; ++nc) {
+    int offset = dataset.Na_sum_cpu[nc];
+    for (int m = 0; m < dataset.structures[nc].num_atom; ++m) {
+      int n = offset + m;
+      fprintf(
+        fid_force,
+        "%g %g %g %g %g %g\n",
+        dataset.force_cpu[n],
+        dataset.force_cpu[n + dataset.N],
+        dataset.force_cpu[n + dataset.N * 2],
+        dataset.force_ref_cpu[n],
+        dataset.force_ref_cpu[n + dataset.N],
+        dataset.force_ref_cpu[n + dataset.N * 2]);
+    }
+  }
+
+  output(false, 1, fid_energy, dataset.energy_cpu.data(), dataset.energy_ref_cpu.data(), dataset);
+
+  output(false, 6, fid_virial, dataset.virial_cpu.data(), dataset.virial_ref_cpu.data(), dataset);
+  output(true, 6, fid_stress, dataset.virial_cpu.data(), dataset.virial_ref_cpu.data(), dataset);
+}
+
+
+
 
 int main(int argc, char* argv[])
 {
@@ -22,7 +91,8 @@ int main(int argc, char* argv[])
   Parameters para(true);
   std::vector<float> elite;
   para.load_from_nep_txt(nep_file, elite);
-
+   para.prediction=1;
+   para.output_descriptor=1;
   int batch_size = para.batch_size;
   if (argc > 3) {
     batch_size = atoi(argv[3]);
@@ -31,15 +101,25 @@ int main(int argc, char* argv[])
       return 1;
     }
   }
+  const auto time_begin1 = std::chrono::high_resolution_clock::now();
 
   std::vector<Structure> structures;
   if (!read_structures_from_file(xyz_file, para, structures)) {
     return 1;
   }
+  const auto time_finish1 = std::chrono::high_resolution_clock::now();
 
+  const std::chrono::duration<double> time_used1 = time_finish1 - time_begin1;
+  print_line_1();
+  printf("read_structures_from_file initialization = %f s.\n", time_used1.count());
   std::vector<Dataset> dataset_vec(1);
   int total_configs = structures.size();
   int printed_index = 0;
+  const auto time_begin2 = std::chrono::high_resolution_clock::now();
+    FILE* fid_force = my_fopen("force_train.out", "w");
+    FILE* fid_energy = my_fopen("energy_train.out", "w");
+    FILE* fid_virial = my_fopen("virial_train.out", "w");
+    FILE* fid_stress = my_fopen("stress_train.out", "w");
   for (int start = 0; start < total_configs; start += batch_size) {
     int end = start + batch_size;
     if (end > total_configs) {
@@ -76,20 +156,30 @@ int main(int argc, char* argv[])
     }
 
     potential->find_force(para, elite.data(), dataset_vec, false, true, 1);
-
-    dataset_vec[0].energy.copy_to_host(dataset_vec[0].energy_cpu.data());
-    for (int nc = 0; nc < dataset_vec[0].Nc; ++nc) {
-      int offset = dataset_vec[0].Na_sum_cpu[nc];
-      float energy_sum = 0.0f;
-      for (int m = 0; m < dataset_vec[0].Na_cpu[nc]; ++m) {
-        energy_sum += dataset_vec[0].energy_cpu[offset + m];
-      }
-      printf("Energy[%d] = %g\n", printed_index + nc,
-             energy_sum / dataset_vec[0].Na_cpu[nc]);
-    }
+        update_energy_force_virial(
+        fid_energy, fid_force, fid_virial, fid_stress, dataset_vec[0] );
+//     dataset_vec[0].energy.copy_to_host(dataset_vec[0].energy_cpu.data());
+//     for (int nc = 0; nc < dataset_vec[0].Nc; ++nc) {
+//       int offset = dataset_vec[0].Na_sum_cpu[nc];
+//       float energy_sum = 0.0f;
+//       for (int m = 0; m < dataset_vec[0].Na_cpu[nc]; ++m) {
+//         energy_sum += dataset_vec[0].energy_cpu[offset + m];
+//       }
+//       printf("Energy[%d] = %g\n", printed_index + nc,
+//              energy_sum / dataset_vec[0].Na_cpu[nc]);
+//     }
 
     printed_index += dataset_vec[0].Nc;
   }
+    fclose(fid_energy);
+    fclose(fid_force);
+    fclose(fid_virial);
+    fclose(fid_stress);
+   const auto time_finish2 = std::chrono::high_resolution_clock::now();
+
+  const std::chrono::duration<double> time_used2 = time_finish2 - time_begin2;
+
+    printf("Time used for predicting = %f s.\n", time_used2.count());
 
   return 0;
 }
