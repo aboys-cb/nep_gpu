@@ -232,6 +232,9 @@ int main(int argc, char* argv[])
    const auto time_finish2 = std::chrono::high_resolution_clock::now();
 
   const std::chrono::duration<double> time_used2 = time_finish2 - time_begin2;
+    FILE* fid_nep = my_fopen("nep.in", "w");
+  fprintf(fid_nep, "prediction  1"   );
+    fclose(fid_nep);
 
     printf("Time used for predicting = %f s.\n", time_used2.count());
 
