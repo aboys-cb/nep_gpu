@@ -102,6 +102,7 @@ static void read_force(
   structure.fx.resize(structure.num_atom);
   structure.fy.resize(structure.num_atom);
   structure.fz.resize(structure.num_atom);
+  structure.has_force = (num_columns > 4 && train_mode == 0);
   if (structure.has_atomic_virial) {
     structure.avirialxx.resize(structure.num_atom);
     structure.avirialyy.resize(structure.num_atom);
@@ -211,8 +212,9 @@ static void read_one_structure(
       structure.energy /= structure.num_atom;
     }
   }
+  structure.has_energy = has_energy_in_exyz;
   if (para.train_mode == 0 && !has_energy_in_exyz) {
-    structure.energy=0.0f;
+    structure.energy = 0.0f;
     //PRINT_INPUT_ERROR("'energy' is missing in the second line of a frame.");
   }
 

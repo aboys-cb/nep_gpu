@@ -22,6 +22,8 @@ struct Structure {
   int num_cell[3];
   int num_atom;
   int has_virial;
+  int has_force;
+  int has_energy;
   int has_atomic_virial;
   int atomic_virial_diag_only;
   int has_temperature;

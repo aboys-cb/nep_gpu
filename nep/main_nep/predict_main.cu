@@ -53,6 +53,40 @@ void  update_energy_force_virial(
   dataset.virial.copy_to_host(dataset.virial_cpu.data());
   dataset.force.copy_to_host(dataset.force_cpu.data());
 
+  std::vector<float> force_ref = dataset.force_ref_cpu;
+  std::vector<float> energy_ref = dataset.energy_ref_cpu;
+  std::vector<float> virial_ref = dataset.virial_ref_cpu;
+
+  for (int nc = 0; nc < dataset.Nc; ++nc) {
+    int offset = dataset.Na_sum_cpu[nc];
+    if (!dataset.structures[nc].has_force) {
+      for (int m = 0; m < dataset.structures[nc].num_atom; ++m) {
+        int n = offset + m;
+        force_ref[n] = dataset.force_cpu[n];
+        force_ref[n + dataset.N] = dataset.force_cpu[n + dataset.N];
+        force_ref[n + dataset.N * 2] = dataset.force_cpu[n + dataset.N * 2];
+      }
+    }
+
+    if (!dataset.structures[nc].has_energy) {
+      float sum = 0.0f;
+      for (int m = 0; m < dataset.Na_cpu[nc]; ++m) {
+        sum += dataset.energy_cpu[offset + m];
+      }
+      energy_ref[nc] = sum / dataset.Na_cpu[nc];
+    }
+
+    if (!dataset.structures[nc].has_virial) {
+      for (int comp = 0; comp < 6; ++comp) {
+        float sum = 0.0f;
+        for (int m = 0; m < dataset.Na_cpu[nc]; ++m) {
+          sum += dataset.virial_cpu[comp * dataset.N + offset + m];
+        }
+        virial_ref[comp * dataset.Nc + nc] = sum / dataset.Na_cpu[nc];
+      }
+    }
+  }
+
   for (int nc = 0; nc < dataset.Nc; ++nc) {
     int offset = dataset.Na_sum_cpu[nc];
     for (int m = 0; m < dataset.structures[nc].num_atom; ++m) {
@@ -63,16 +97,16 @@ void  update_energy_force_virial(
         dataset.force_cpu[n],
         dataset.force_cpu[n + dataset.N],
         dataset.force_cpu[n + dataset.N * 2],
-        dataset.force_ref_cpu[n],
-        dataset.force_ref_cpu[n + dataset.N],
-        dataset.force_ref_cpu[n + dataset.N * 2]);
+        force_ref[n],
+        force_ref[n + dataset.N],
+        force_ref[n + dataset.N * 2]);
     }
   }
 
-  output(false, 1, fid_energy, dataset.energy_cpu.data(), dataset.energy_ref_cpu.data(), dataset);
+  output(false, 1, fid_energy, dataset.energy_cpu.data(), energy_ref.data(), dataset);
 
-  output(false, 6, fid_virial, dataset.virial_cpu.data(), dataset.virial_ref_cpu.data(), dataset);
-  output(true, 6, fid_stress, dataset.virial_cpu.data(), dataset.virial_ref_cpu.data(), dataset);
+  output(false, 6, fid_virial, dataset.virial_cpu.data(), virial_ref.data(), dataset);
+  output(true, 6, fid_stress, dataset.virial_cpu.data(), virial_ref.data(), dataset);
 }
 
 
@@ -115,11 +149,31 @@ int main(int argc, char* argv[])
   std::vector<Dataset> dataset_vec(1);
   int total_configs = structures.size();
   int printed_index = 0;
+
+  std::string base_name(xyz_file);
+  size_t slash = base_name.find_last_of("/");
+  if (slash != std::string::npos) {
+    base_name = base_name.substr(slash + 1);
+  }
+  size_t dot = base_name.find_last_of('.');
+  std::string name_no_ext = (dot == std::string::npos) ? base_name : base_name.substr(0, dot);
+
+  std::string force_file = "force_" + name_no_ext + ".out";
+  std::string energy_file = "energy_" + name_no_ext + ".out";
+  std::string virial_file = "virial_" + name_no_ext + ".out";
+  std::string stress_file = "stress_" + name_no_ext + ".out";
+
+  if (name_no_ext == "train") {
+    para.descriptor_filename = "descriptor.out";
+  } else {
+    para.descriptor_filename = std::string("descriptor_") + name_no_ext + ".out";
+  }
+
   const auto time_begin2 = std::chrono::high_resolution_clock::now();
-    FILE* fid_force = my_fopen("force_train.out", "w");
-    FILE* fid_energy = my_fopen("energy_train.out", "w");
-    FILE* fid_virial = my_fopen("virial_train.out", "w");
-    FILE* fid_stress = my_fopen("stress_train.out", "w");
+    FILE* fid_force = my_fopen(force_file.c_str(), "w");
+    FILE* fid_energy = my_fopen(energy_file.c_str(), "w");
+    FILE* fid_virial = my_fopen(virial_file.c_str(), "w");
+    FILE* fid_stress = my_fopen(stress_file.c_str(), "w");
   for (int start = 0; start < total_configs; start += batch_size) {
     int end = start + batch_size;
     if (end > total_configs) {

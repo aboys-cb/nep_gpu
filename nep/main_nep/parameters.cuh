@@ -70,6 +70,7 @@ public:
   int fine_tune = 0; // fine_tune option; 0=no, 1=yes
   std::string fine_tune_nep_txt = "";
   std::string fine_tune_nep_restart = "";
+  std::string descriptor_filename = "descriptor.out";
 
   // check if a parameter has been set:
   bool is_train_mode_set;

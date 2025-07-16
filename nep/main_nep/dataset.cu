@@ -35,6 +35,8 @@ void Dataset::copy_structures(std::vector<Structure>& structures_input, int n1, 
     structures[n].num_atom = structures_input[n_input].num_atom;
     structures[n].weight = structures_input[n_input].weight;
     structures[n].has_virial = structures_input[n_input].has_virial;
+    structures[n].has_force = structures_input[n_input].has_force;
+    structures[n].has_energy = structures_input[n_input].has_energy;
     structures[n].has_atomic_virial = structures_input[n_input].has_atomic_virial;
     structures[n].atomic_virial_diag_only = structures_input[n_input].atomic_virial_diag_only;
     structures[n].charge = structures_input[n_input].charge;
