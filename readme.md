@@ -1,3 +1,7 @@
+# 声明
+代码从GPUMD仓库复制并修改的版本
+https://github.com/brucefan1983/GPUMD
+目前支持正常的nep模型，其他我用不到 没处理。
 # 安装
 使用cuda 直接make nep 即可
 # 使用
