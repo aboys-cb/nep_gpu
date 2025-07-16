@@ -135,6 +135,7 @@ void Parameters::set_default_parameters()
   typewise_cutoff_zbl_factor = -1.0f;
   output_descriptor = false;
   charge_mode = 0;
+  descriptor_filename = "descriptor.out";
 
   type_weight_cpu.resize(NUM_ELEMENTS);
   zbl_para.resize(550); // Maximum number of zbl parameters
